@@ -1,5 +1,12 @@
 <?php
-
+/**
+ * System config service
+ *
+ * @category  TimetableTool
+ * @package   TimetableTool_System
+ * @author    Paul Shunkow
+ * @copyright 2014 Paul Shunkow
+ */
 namespace System;
 
 use Entities\Template\AbstractEntityItem;

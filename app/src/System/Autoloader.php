@@ -1,5 +1,12 @@
 <?php
-
+/**
+ * System Autoloader
+ *
+ * @category  TimetableTool
+ * @package   TimetableTool
+ * @author    Paul Shunkow
+ * @copyright 2014 Paul Shunkow
+ */
 class Autoloader
 {
     /**

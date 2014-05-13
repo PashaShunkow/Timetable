@@ -1,5 +1,12 @@
 <?php
-
+/**
+ * System router service
+ *
+ * @category  TimetableTool
+ * @package   TimetableTool_System
+ * @author    Paul Shunkow
+ * @copyright 2014 Paul Shunkow
+ */
 namespace System;
 
 use \App;

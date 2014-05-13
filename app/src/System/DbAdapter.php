@@ -1,5 +1,12 @@
 <?php
-
+/**
+ * System DB Adapter service
+ *
+ * @category  TimetableTool
+ * @package   TimetableTool_System
+ * @author    Paul Shunkow
+ * @copyright 2014 Paul Shunkow
+ */
 namespace System;
 
 use Entities\Object;
@@ -8,22 +15,30 @@ use \PDO;
 
 class DbAdapter extends Object
 {
-    const KEY_QUERY_ENTITY   = 'keys';
-    const VALUE_QUERY_ENTITY = 'values';
+    const QUERY_STRING = '';
+
+    const SQL_CONDITION_EQ   = ' = ';
+    const SQL_CONDITION_NEQ  = ' != ';
+    const SQL_CONDITION_GT   = ' > ';
+    const SQL_CONDITION_LT   = ' < ';
+
+    const SQL_OPERATOR_WHERE = 'WHERE ';
+    const SQL_OPERATOR_AND   = ' AND ';
 
     const DB_CONFIG_AREA     = 'data_base';
 
-    const ACTION_METHOD_ROOT = '_prepareStringFor';
+    static protected  $_connection;
 
-    protected $_modelData;
     protected $_statement;
     protected $_actions = array(
-        'insert'   => 'INSERT INTO {{table}} {{keys}} VALUES {{values}}',
-        'describe' => 'DESCRIBE {{table}}'
+        'insert'   => 'System\DbAdapter\Insert',
+        'describe' => 'System\DbAdapter\Describe',
+        'select'   => 'System\DbAdapter\Select'
     );
 
     public function __construct()
     {
+        $this->setQueryString(static::QUERY_STRING);
         $this->setData('db_config', App::instance()->getService('config')->getConfigArea(self::DB_CONFIG_AREA));
         $this->createConnection();
     }
@@ -35,13 +50,13 @@ class DbAdapter extends Object
      */
     public function createConnection()
     {
-        if (!$this->getData('connection')) {
+        if (!self::$_connection) {
             $dbConfig = $this->getDbConfig();
             $_connection = new PDO(
                 'mysql:host='. $dbConfig['host'] .';dbname='. $dbConfig['dbname'] ,
                 $dbConfig['user'],
                 $dbConfig['pass']);
-            $this->setConnection($_connection);
+            self::$_connection = $_connection;
         }
         return $this;
     }
@@ -53,31 +68,23 @@ class DbAdapter extends Object
      */
     public function getConnection()
     {
-        if (!$this->getData('connection')) {
+        if (!self::$_connection) {
             $this->createConnection();
         }
-        return $this->getData('connection');
+        return self::$_connection;
     }
 
     /**
-     * Set model data
+     * Set bind pairs array
      *
      * @param array $data Model data
      *
      * @return $this
      */
-    public function setModelData($data)
+    public function setBindPairs(array $data)
     {
-        $this->_modelData = $data;
+        $this->setData('bind_pairs', $data);
         return $this;
-    }
-
-    public function getModelData()
-    {
-        if (empty($this->_modelData) || !is_array($this->_modelData)) {
-            App::error('Model data empty or wrong formated (should be an array)');
-        }
-        return $this->_modelData;
     }
 
     /**
@@ -90,6 +97,9 @@ class DbAdapter extends Object
     public function setStatement(\PDOStatement $statement)
     {
         $this->_statement = $statement;
+        if ($this->getBindPairs()) {
+            $this->_bindParams();
+        }
         return $this;
     }
 
@@ -110,34 +120,13 @@ class DbAdapter extends Object
      *
      * @return $this
      */
-    public function setCurrentAction($actionName)
+    public function defineCurrentAction($actionName)
     {
-        $action = $this->getAction($actionName);
-        $this->setData('current_action', array($actionName => $action));
-        return $this;
-    }
-
-    /**
-     * Return current SQL action
-     *
-     * @return string
-     */
-    public function getCurrentAction()
-    {
-        $action = $this->getData('current_action');
-        return reset($action);
-    }
-
-
-    /**
-     * Return current SQL action name
-     *
-     * @return string
-     */
-    public function getCurrentActionName()
-    {
-        $actionName = array_keys($this->getData('current_action'));
-        return reset($actionName);
+        if ($this->_actions[$actionName]) {
+            $currentActionName = $this->_actions[$actionName];
+            $currentAction = new $currentActionName();
+            return $currentAction;
+        }
     }
 
     /**
@@ -166,7 +155,7 @@ class DbAdapter extends Object
     }
 
     /**
-     * Fetch sql query result
+     * FetchAll wrapper
      *
      * @return array
      */
@@ -176,11 +165,23 @@ class DbAdapter extends Object
     }
 
     /**
+     * fetch wrapper
+     *
+     * @param null $fetch_style
+     *
+     * @return mixed
+     */
+    public function fetch($fetch_style = null)
+    {
+        return $this->getStatement()->fetch($fetch_style);
+    }
+
+    /**
      * Bind params in query string
      */
-    public function bindParams()
+    protected function _bindParams()
     {
-        $data = $this->getModelData();
+        $data = $this->getBindPairs();
         foreach ($data as $key => &$value) {
             $key = ':' . $key;
             $this->getStatement()->bindParam($key, $value);
@@ -188,95 +189,27 @@ class DbAdapter extends Object
     }
 
     /**
-     * Construct and return query string
+     * Set table name into query string
      *
-     * @return string
+     * @param string $tableName Table name
+     *
+     * @return $this
      */
-    public function prepareQueryString()
+    public function setTable($tableName)
     {
-        $actionName  = $this->getCurrentActionName();
-        $actionMethodName = self::ACTION_METHOD_ROOT . ucfirst($actionName);
-
-        if (!is_callable(array($this, $actionMethodName))) {
-            App::error('Cant call action method: ' . $actionMethodName . ' should be defined in: ' . get_class($this));
+        if($this->getQueryString())
+        {
+            $queryString = $this->getQueryString();
+            $queryString = str_replace('{{table}}', $tableName, $queryString);
+            $this->setQueryString($queryString);
+            return $this;
+        }else{
+            $this->_notDefinedAction();
         }
-
-        $queryString = $this->$actionMethodName($this->getCurrentAction());
-
-        return $queryString;
     }
 
-    /**
-     * Prepare query string fro insert SQL action
-     *
-     * @param string $queryString Query string for insert action
-     *
-     * @return string
-     */
-    protected function _prepareStringForInsert($queryString)
+    protected function _notDefinedAction()
     {
-        $keys   = $this->_preparePlaceholdersInQueryString(self::KEY_QUERY_ENTITY);
-        $values = $this->_preparePlaceholdersInQueryString(self::VALUE_QUERY_ENTITY);
-
-        $queryString = str_replace(
-            array('{{table}}', '{{keys}}', '{{values}}'),
-            array($this->getTable(), $keys, $values),
-            $queryString
-        );
-
-        return $queryString;
-    }
-
-    /**
-     * Prepare query string fro describe SQL action
-     *
-     * @param string $queryString Query string for insert action
-     *
-     * @return string
-     */
-    protected function _prepareStringForDescribe($queryString)
-    {
-        $queryString = str_replace(
-            array('{{table}}'),
-            array($this->getTable()),
-            $queryString
-        );
-
-        return $queryString;
-    }
-
-    /**
-     * Convert data into query entities (keys, values)
-     *
-     * @param string $type entity in query string
-     *
-     * @return string
-     */
-    protected function _preparePlaceholdersInQueryString($type)
-    {
-        $_prefix = '';
-
-        switch ($type) {
-            case self::KEY_QUERY_ENTITY :
-                $_prefix = '';
-                break;
-            case self::VALUE_QUERY_ENTITY :
-                $_prefix = ':';
-                break;
-        }
-
-        $data = $this->getModelData();
-
-        $preparedEntities = '(';
-        $i = 0;
-        foreach ($data as $key => $values) {
-            if ($i != 0) {
-                $preparedEntities .= ', ';
-            }
-            $preparedEntities .= $_prefix . $key;
-            $i++;
-        }
-        $preparedEntities .= ')';
-        return $preparedEntities;
+        App::error('SQL Action should be defined before');
     }
 }
