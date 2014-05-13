@@ -1,0 +1,8 @@
+{
+    "data_base":{
+        "host"  :"localhost",
+        "dbname":"tt_tool",
+        "user"  :"root",
+        "pass"  :""
+    }
+}

@@ -1,0 +1,6 @@
+{
+    "model":{
+        "table"    :"teachers",
+        "entity_id":"id"
+    }
+}
