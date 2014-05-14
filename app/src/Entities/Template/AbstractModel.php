@@ -46,6 +46,17 @@ abstract class AbstractModel extends AbstractEntityItem
         return $this->_entityConfig;
     }
 
+
+    /**
+     * Return value if entity id fro current model
+     *
+     * @return int
+     */
+    public function getEntityId()
+    {
+        return $this->getData($this->getEntityConfig('entity_id'));
+    }
+
     /**
      * Return db adapter
      *
@@ -58,20 +69,24 @@ abstract class AbstractModel extends AbstractEntityItem
 
     public function load($id)
     {
-        $pairs = array($this->getEntityConfig('entity_id') => $id);
-        $dbAdapter = $this->getDbAdapter();
-        /** @var \System\DbAdapter\Select $select */
-        $select = $dbAdapter->defineCurrentAction('select');
-        $select->setTable($this->getEntityConfig('table'));
-        $select->addToSelect('*');
-        $select->where($pairs, DbAdapter::SQL_CONDITION_EQ);
-        $select->prepareQuery();
-        if ($select->execute()) {
-            $result = $select->fetch(\PDO::FETCH_ASSOC);
-            $this->_fillModelData($result);
-            return $this;
-        }else{
-            App::error('Cant load model by id: ' . $id);
+        try {
+            $pairs = array($this->getEntityConfig('entity_id') => $id);
+            $dbAdapter = $this->getDbAdapter();
+            /** @var \System\DbAdapter\Select $select */
+            $select = $dbAdapter->defineCurrentAction('select');
+            $select->setTable($this->getEntityConfig('table'));
+            $select->addToSelect('*');
+            $select->where($pairs, DbAdapter::SQL_CONDITION_EQ);
+            $select->prepareQuery();
+            if ($select->execute()) {
+                $result = $select->fetch(\PDO::FETCH_ASSOC);
+                $this->_fillModelData($result);
+                return $this;
+            } else {
+                App::error('Cant load model by id: ' . $id);
+            }
+        } catch (\PDOException $e) {
+            App::error('Cant load model: ' . $e->getMessage());
         }
     }
 
@@ -85,18 +100,56 @@ abstract class AbstractModel extends AbstractEntityItem
         try {
             $modelData = $this->_prepareDataBeforeSave($this->getData());
             $dbAdapter = $this->getDbAdapter();
-            /** @var \System\DbAdapter\Insert $insert */
-            $insert = $dbAdapter->defineCurrentAction('insert');
-            $insert->setTable($this->getEntityConfig('table'));
-            $insert->setBindPairs($modelData);
-            $insert->prepareQuery();
-            if (!$insert->execute()) {
+            if ($id = $this->getEntityId()) {
+                /** @var \System\DbAdapter\Update $action */
+                $action = $dbAdapter->defineCurrentAction('update');
+            } else {
+                /** @var \System\DbAdapter\Insert $action */
+                $action = $dbAdapter->defineCurrentAction('insert');
+            }
+            $action->setTable($this->getEntityConfig('table'));
+            $action->setBindPairs($modelData);
+            if ($id) {
+                $pairs = array($this->getEntityConfig('entity_id') => $id);
+                $action->where($pairs, DbAdapter::SQL_CONDITION_EQ);
+            }
+            $action->prepareQuery();
+            if (!$action->execute()) {
                 App::error('Cant save the model!');
             }
         } catch (\PDOException $e) {
             App::error('Cant save model: ' . $e->getMessage());
         }
         return $this;
+    }
+
+    /**
+     * Common delete model method
+     *
+     * @return bool
+     */
+    public function delete()
+    {
+        if (!$id = $this->getEntityId()) {
+            return false;
+        }
+        $pairs = array($this->getEntityConfig('entity_id') => $id);
+        $dbAdapter = $this->getDbAdapter();
+        /** @var \System\DbAdapter\Delete $delete */
+        $delete = $dbAdapter->defineCurrentAction('delete');
+
+        try {
+            $result = $delete->setTable($this->getEntityConfig('table'))
+                ->where($pairs, DbAdapter::SQL_CONDITION_EQ)
+                ->prepareQuery()
+                ->execute();
+            if ($result) {
+                $this->_flushModelData();
+            }
+            return $result;
+        } catch (\PDOException $e) {
+            App::error('Cant delete model: ' . $e->getMessage());
+        }
     }
 
     /**
@@ -120,6 +173,9 @@ abstract class AbstractModel extends AbstractEntityItem
             foreach ($output as $column) {
                 $tableMap[$column['Field']] = true;
             }
+            /**
+             * Remove not existing in DB keys
+             */
             $data = array_intersect_key($data, $tableMap);
             return $data;
         } else {
@@ -137,6 +193,18 @@ abstract class AbstractModel extends AbstractEntityItem
     protected function _fillModelData($data)
     {
         $this->setData($data);
+        $this->setOrigData(null, null);
+        return $this;
+    }
+
+    /**
+     * Flush inner data arrays
+     *
+     * @return $this
+     */
+    protected function _flushModelData()
+    {
+        $this->unsetData();
         $this->setOrigData(null, null);
         return $this;
     }

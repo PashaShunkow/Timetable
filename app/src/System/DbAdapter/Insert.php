@@ -24,9 +24,9 @@ class Insert extends DbAdapter
     }
 
     /**
-     * Construct and return query string
+     * Prepare query string before executing
      *
-     * @return string
+     * @return $this
      */
     public function prepareQuery()
     {

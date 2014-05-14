@@ -27,14 +27,8 @@ class DbAdapter extends Object
 
     const DB_CONFIG_AREA     = 'data_base';
 
-    static protected  $_connection;
-
     protected $_statement;
-    protected $_actions = array(
-        'insert'   => 'System\DbAdapter\Insert',
-        'describe' => 'System\DbAdapter\Describe',
-        'select'   => 'System\DbAdapter\Select'
-    );
+    static protected  $_connection;
 
     public function __construct()
     {
@@ -114,7 +108,7 @@ class DbAdapter extends Object
     }
 
     /**
-     * Set current SQL action and name
+     * Return object of required SQL action
      *
      * @param string $actionName Action name
      *
@@ -122,27 +116,15 @@ class DbAdapter extends Object
      */
     public function defineCurrentAction($actionName)
     {
-        if ($this->_actions[$actionName]) {
-            $currentActionName = $this->_actions[$actionName];
+        $currentActionName = 'System\DbAdapter\\' . ucfirst($actionName);
+        if (class_exists($currentActionName)) {
             $currentAction = new $currentActionName();
             return $currentAction;
+        }else{
+            App::error('There is no such SQL action: ' . $actionName);
         }
     }
 
-    /**
-     * Return action string
-     *
-     * @param string $key Action key
-     *
-     * @return mixed
-     */
-    public function getAction($key)
-    {
-        if (!isset($this->_actions[$key])) {
-            App::error('There is no such SQL action: ' . $key);
-        }
-        return $this->_actions[$key];
-    }
 
     /**
      * Execute SQL query
@@ -204,12 +186,49 @@ class DbAdapter extends Object
             $this->setQueryString($queryString);
             return $this;
         }else{
-            $this->_notDefinedAction();
+            App::error('SQL Action should be defined before');
         }
     }
 
-    protected function _notDefinedAction()
+    /**
+     * Add where sql operator to query string
+     *
+     * @param array  $pairs key => value pairs
+     * @param string $condition eq, neq and etc.
+     *
+     * @return $this
+     */
+    public function where($pairs, $condition)
     {
-        App::error('SQL Action should be defined before');
+        $queryString = $this->getQueryString();
+        foreach ($pairs as $key => $value) {
+            if ($this->_isWhereExist($queryString)) {
+                $queryString .= self::SQL_OPERATOR_AND;
+            }else{
+                $queryString .= self::SQL_OPERATOR_WHERE;
+            }
+            $queryString .= $key . $condition . ':' . $key;
+        }
+        if ($bindPairs = $this->getBindPairs()) {
+            $pairs = array_merge($bindPairs, $pairs);
+        }
+        $this->setBindPairs($pairs);
+        $this->setQueryString($queryString);
+        return $this;
+    }
+
+    /**
+     * Check if WHERE was applied to current select
+     *
+     * @param string $queryString
+     *
+     * @return bool
+     */
+    protected function _isWhereExist($queryString)
+    {
+        if (strpos($queryString, self::SQL_OPERATOR_WHERE) !== false) {
+            return true;
+        }
+        return false;
     }
 }
