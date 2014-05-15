@@ -34,8 +34,8 @@ class Config
      */
     public function getEntityConfig(AbstractEntityItem $entityObject)
     {
-        $entityKey = $entityObject->getEntityKey();
-        return $this->_getEntityConfigs($entityKey);
+        $entityName = $entityObject->getEntityName();
+        return $this->_getEntityConfigs($entityName);
     }
 
     /**

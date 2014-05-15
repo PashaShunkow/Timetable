@@ -52,10 +52,10 @@ class Select extends  DbAdapter
             $queryString = $this->getQueryString();
             $needlesString = '';
             for ($i = 0; $i < count($needles); $i++) {
-                $needlesString .= $needles[$i];
                 if ($i > 0) {
                     $needlesString .= ', ';
                 }
+                $needlesString .= $needles[$i];
             }
             $queryString = str_replace('{{needle}}', $needlesString, $queryString);
             $this->setQueryString($queryString);

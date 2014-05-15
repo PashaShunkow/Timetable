@@ -1,5 +1,12 @@
 <?php
-
+/**
+ * Abstract model class
+ *
+ * @category  TimetableTool
+ * @package   TimetableTool_Entities\Template
+ * @author    Paul Shunkow
+ * @copyright 2014 Paul Shunkow
+ */
 namespace Entities\Template;
 
 use System\Config;
@@ -28,6 +35,18 @@ abstract class AbstractModel extends AbstractEntityItem
     }
 
     /**
+     * Return items collection
+     *
+     * @return AbstractCollection
+     */
+    public function getCollection()
+    {
+        $entityNamespace = $this->_getEntityNamespace();
+        $collectionName  = $entityNamespace . ucfirst(AbstractCollection::ENTITY_TYPE);
+        return new $collectionName($this);
+    }
+
+    /**
      * Return config for current entity
      *
      * @param string $key Key in config array
@@ -46,7 +65,6 @@ abstract class AbstractModel extends AbstractEntityItem
         return $this->_entityConfig;
     }
 
-
     /**
      * Return value if entity id fro current model
      *
@@ -55,6 +73,26 @@ abstract class AbstractModel extends AbstractEntityItem
     public function getEntityId()
     {
         return $this->getData($this->getEntityConfig('entity_id'));
+    }
+
+    /**
+     * Return name of entity table
+     *
+     * @return string
+     */
+    public function getEntityTable()
+    {
+        return $this->getEntityConfig('table');
+    }
+
+    /**
+     * Return entity name of current model
+     *
+     * @return string
+     */
+    public function getEntityPrimaryKey()
+    {
+        return $this->getEntityConfig('entity_id');
     }
 
     /**
@@ -70,12 +108,12 @@ abstract class AbstractModel extends AbstractEntityItem
     public function load($id)
     {
         try {
-            $pairs = array($this->getEntityConfig('entity_id') => $id);
+            $pairs = array($this->getEntityPrimaryKey() => $id);
             $dbAdapter = $this->getDbAdapter();
             /** @var \System\DbAdapter\Select $select */
             $select = $dbAdapter->defineCurrentAction('select');
-            $select->setTable($this->getEntityConfig('table'));
-            $select->addToSelect('*');
+            $select->setTable($this->getEntityTable());
+            $select->addToSelect(DbAdapter::SQL_INCLUDE_ALL);
             $select->where($pairs, DbAdapter::SQL_CONDITION_EQ);
             $select->prepareQuery();
             if ($select->execute()) {
@@ -107,10 +145,10 @@ abstract class AbstractModel extends AbstractEntityItem
                 /** @var \System\DbAdapter\Insert $action */
                 $action = $dbAdapter->defineCurrentAction('insert');
             }
-            $action->setTable($this->getEntityConfig('table'));
+            $action->setTable($this->getEntityTable());
             $action->setBindPairs($modelData);
             if ($id) {
-                $pairs = array($this->getEntityConfig('entity_id') => $id);
+                $pairs = array($this->getEntityPrimaryKey() => $id);
                 $action->where($pairs, DbAdapter::SQL_CONDITION_EQ);
             }
             $action->prepareQuery();
@@ -133,13 +171,13 @@ abstract class AbstractModel extends AbstractEntityItem
         if (!$id = $this->getEntityId()) {
             return false;
         }
-        $pairs = array($this->getEntityConfig('entity_id') => $id);
+        $pairs = array($this->getEntityPrimaryKey() => $id);
         $dbAdapter = $this->getDbAdapter();
         /** @var \System\DbAdapter\Delete $delete */
         $delete = $dbAdapter->defineCurrentAction('delete');
 
         try {
-            $result = $delete->setTable($this->getEntityConfig('table'))
+            $result = $delete->setTable($this->getEntityTable())
                 ->where($pairs, DbAdapter::SQL_CONDITION_EQ)
                 ->prepareQuery()
                 ->execute();
@@ -150,6 +188,18 @@ abstract class AbstractModel extends AbstractEntityItem
         } catch (\PDOException $e) {
             App::error('Cant delete model: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Return entity namespace
+     *
+     * @return string
+     */
+    protected function _getEntityNamespace()
+    {
+        $namespace = get_class($this);
+        $namespace = str_replace(ucfirst(self::ENTITY_TYPE), '', $namespace);
+        return $namespace;
     }
 
     /**
@@ -165,7 +215,7 @@ abstract class AbstractModel extends AbstractEntityItem
         $dbAdapter = $this->getDbAdapter();
         /** @var \System\DbAdapter\Describe $describe */
         $describe = $dbAdapter->defineCurrentAction('describe');
-        $describe->setTable($this->getEntityConfig('table'));
+        $describe->setTable($this->getEntityTable());
         $describe->prepareQuery();
         if ($describe->execute()) {
             $output = $describe->fetchAll();

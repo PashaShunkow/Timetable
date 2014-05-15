@@ -25,6 +25,8 @@ class DbAdapter extends Object
     const SQL_OPERATOR_WHERE = 'WHERE ';
     const SQL_OPERATOR_AND   = ' AND ';
 
+    const SQL_INCLUDE_ALL    = '*';
+
     const DB_CONFIG_AREA     = 'data_base';
 
     protected $_statement;
@@ -58,7 +60,7 @@ class DbAdapter extends Object
     /**
      * Return db connection
      *
-     * @return mixed
+     * @return \PDO
      */
     public function getConnection()
     {
@@ -139,11 +141,13 @@ class DbAdapter extends Object
     /**
      * FetchAll wrapper
      *
+     * @param null $fetch_style
+     *
      * @return array
      */
-    public function fetchAll()
+    public function fetchAll($fetch_style = null)
     {
-        return $this->getStatement()->fetchAll();
+        return $this->getStatement()->fetchAll($fetch_style);
     }
 
     /**

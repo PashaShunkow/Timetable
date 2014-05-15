@@ -12,7 +12,7 @@ abstract class AbstractEntityItem extends Object
      *
      * @return string
      */
-    public function getEntityKey()
+    public function getEntityName()
     {
         $fullClassName = array_slice(explode('\\', get_class($this)), 0, -1);
         $entityKey = array_slice($fullClassName, 1, 1);
