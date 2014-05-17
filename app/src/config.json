@@ -8,5 +8,8 @@
     "debug":{
         "log_file":"default.log",
         "log_dir" :"log"
+    },
+    "system":{
+        "from_handler":"handler/view/"
     }
 }

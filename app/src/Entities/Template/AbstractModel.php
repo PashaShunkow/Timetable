@@ -152,10 +152,15 @@ abstract class AbstractModel extends AbstractEntityItem
                 $action->where($pairs, DbAdapter::SQL_CONDITION_EQ);
             }
             $action->prepareQuery();
-            if (!$action->execute()) {
-                App::error('Cant save the model!');
+            $action->beginTransaction();
+            $action->execute();
+            $lastInsertId = $action->lastInsertId($this->getEntityTable());
+            $action->commit();
+            if ($lastInsertId != 0) {
+                $this->setData($this->getEntityPrimaryKey(), $lastInsertId);
             }
         } catch (\PDOException $e) {
+            $action->rollBack();
             App::error('Cant save model: ' . $e->getMessage());
         }
         return $this;
@@ -229,7 +234,7 @@ abstract class AbstractModel extends AbstractEntityItem
             $data = array_intersect_key($data, $tableMap);
             return $data;
         } else {
-            App::error('Cant map a table (name): ' . $this->getEntityConfig('table') . ' probably it is not exist');
+            App::error('Cant map a table (name): ' . $this->getEntityConfig('table') . ' probably it is not exist', true);
         }
     }
 

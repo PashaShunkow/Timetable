@@ -2,21 +2,26 @@
 
 class App
 {
+    const APP_FOLDER      = 'app';
     const SRC_FOLDER      = 'src';
     const SERVICES_FOLDER = 'System';
     const ENTITY_FOLDER   = 'Entities';
     const RESOURCE_FOLDER = 'resources';
     const TEMPLATE_FOLDER = 'templates';
+    const SKIN_FOLDER     = 'skin';
 
     static private $_appRoot;
     static private $_app;
 
     protected $_services = array(
+        'request'   => null,
         'config'    => null,
         'router'    => null,
-        'layout'    => null,
+        'factory'    => null,
         'dbAdapter' => null
     );
+
+    protected $_rootView;
 
     protected function __construct()
     {
@@ -44,19 +49,45 @@ class App
     }
 
     /**
-     * Return base url of the site
+     * Return base url of the site, add params if specified
      *
-     * @param null $route
+     * @param  null $route
+     * @param  array  $params Get params
      *
      * @return string
      */
-    static public function getBaseUrl($route = null)
+    static public function getBaseUrl($route = null, $params = array())
     {
+        /** @var  $request System\Request */
+        $request   = self::instance()->getService('request');
+        $https     = $request->getSERVER('HTTPS');
+        $httpHost  = $request->getSERVER('HTTP_HOST');
+        $paramsStr = '';
+        if (!empty($params)) {
+            $paramsStr = self::_convertToString($params);
+        }
         return sprintf(
             "%s://%s",
-            isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] != 'off' ? 'https' : 'http',
-            $_SERVER['HTTP_HOST']
-        ) . DIRECTORY_SEPARATOR .$route;
+            isset($https) && $https != 'off' ? 'https' : 'http',
+            $httpHost
+        ) . '/' . $route . $paramsStr;
+    }
+
+    /**
+     * Convert params array to string
+     *
+     * @param  array  $params params array ($key => $value)
+     * @return string
+     */
+    protected function _convertToString($params)
+    {
+        $paramsStr = '';
+        foreach ($params as $name => $value) {
+            if ($name !== null && $value !== null) {
+                $paramsStr .= '/' . $name . '-' . $value;
+            }
+        }
+        return $paramsStr;
     }
 
     /**
@@ -67,6 +98,17 @@ class App
     static public function getTemplateDir()
     {
         return self::getBaseDir() . DIRECTORY_SEPARATOR . self::RESOURCE_FOLDER . DIRECTORY_SEPARATOR . self::TEMPLATE_FOLDER;
+    }
+
+
+    /**
+     * Return skin folder
+     *
+     * @return string
+     */
+    static public function getSkinDir()
+    {
+        return self::getBaseDir() . DIRECTORY_SEPARATOR .self::RESOURCE_FOLDER . DIRECTORY_SEPARATOR . self::SKIN_FOLDER;
     }
 
 
@@ -99,7 +141,7 @@ class App
             self::$_app = new self();
         }
         self::$_app->_init();
-        self::instance()->getService('layout')->renderLayout();
+        self::instance()->startRender();
     }
 
     /**
@@ -143,6 +185,39 @@ class App
                 $this->_services[$name] = $service;
             }
         }
+    }
+
+    /**
+     * @param  \Entities\Root\View $view View object
+     * @return $this
+     */
+    public function setRootView($view)
+    {
+        $this->_rootView = $view;
+        return $this;
+    }
+
+    /**
+     * Return root view object
+     *
+     * @return mixed
+     */
+    public function getRootView()
+    {
+        return $this->_rootView;
+    }
+
+    /**
+     * Render all views
+     */
+    public function startRender($output = null)
+    {
+        if (!$output) {
+            $output = 'getHtml';
+        }
+
+        $outHtml = $this->_rootView->$output();
+        echo $outHtml;
     }
 
     /**
@@ -197,6 +272,48 @@ class App
     {
         $message = 'SYSTEM LOG ( ' . $date = date('Y/m/d H:i:s', time()) . ' ): ' . $message ."\n";
         return $message;
+    }
+
+    /**
+     * Redirect on specified url
+     *
+     * @param string $url                  Base url
+     * @param bool   $removeExistingParams Set true fro get clear URL (without old get params)
+     * @param null   $params Params array
+     */
+    static public function redirectOn($url, $params = null, $removeExistingParams = false)
+    {
+        if ($removeExistingParams || $params) {
+            $url = self::_rebuildUrl($url);
+        }
+        if ($params) {
+            $url .= self::_convertToString($params);
+        }
+        header('Location: ' . $url);
+    }
+
+    /**
+     * Rebuild url for remove 'old' get params
+     *
+     * @param  string $url Url
+     * @return string
+     */
+    protected function _rebuildUrl($url)
+    {
+        $requestUri = str_replace(self::getBaseUrl(), '', $url);
+        if($requestUri && strpos($requestUri, '/') !== false){
+            if (strpos($requestUri, '/') === 0) {
+                $requestUri = substr($requestUri, 1);
+            }
+            $parts = explode('/', $requestUri);
+            $requestUri = '';
+            for ($i = 0; $i < 3; $i++) {
+                if (isset($parts[$i])) {
+                    $requestUri .= $parts[$i] . '/';
+                }
+            }
+        }
+        return self::getBaseUrl() . rtrim($requestUri, '/');
     }
 
     /**

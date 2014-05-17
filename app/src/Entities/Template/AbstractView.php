@@ -37,6 +37,16 @@ abstract class AbstractView extends AbstractEntityItem
     }
 
     /**
+     * Return request object
+     *
+     * @return \System\Request
+     */
+    public function getRequest()
+    {
+        return App::instance()->getService('request');
+    }
+
+    /**
      * Return inner model
      *
      * @return AbstractModel
@@ -100,12 +110,13 @@ abstract class AbstractView extends AbstractEntityItem
      * Return base url and route if specified
      *
      * @param null $route Route
+     * @param  array  $params Get params
      *
      * @return string
      */
-    public function getBaseUrl($route = null)
+    public function getBaseUrl($route = null, $params = array())
     {
-        return App::getBaseUrl($route);
+        return App::getBaseUrl($route, $params);
     }
 
     /**
@@ -118,5 +129,95 @@ abstract class AbstractView extends AbstractEntityItem
     public function tr($string)
     {
         return $string;
+    }
+
+    /**
+     * Return include html of .js file in skin folder
+     *
+     * @param  string $filename
+     * @return string
+     */
+    public function getSkinJs($filename)
+    {
+        $html = '';
+        if ($fileUrl = $this->_getSkinFileUrl($filename)) {
+            $html = '<script type="text/javascript" src="' . $fileUrl . '"></script>';
+        }
+        return $html;
+    }
+
+    /**
+     * Return include html of .css file in skin folder
+     *
+     * @param  string $filename
+     * @return string
+     */
+    public function getSkinCss($filename)
+    {
+        $html = '';
+        if ($fileUrl = $this->_getSkinFileUrl($filename)) {
+            $html = '<link rel="stylesheet" type="text/css" href="' . $fileUrl . '" media="all" />';
+        }
+        return $html;
+    }
+
+    /**
+     * Return entity name
+     *
+     * @return null|string
+     */
+    public function getEntityName()
+    {
+        if($model = $this->getModel())
+        {
+            return $model->getEntityName();
+        }
+        return null;
+    }
+
+    /**
+     * Return input name related to current entity
+     *
+     * @param  string $name Input name
+     * @return string
+     */
+    public function getInputName($name)
+    {
+        $inputName = $this->getEntityName() . '[' . $name . ']';
+        return $inputName;
+    }
+
+    /**
+     * Return URL to handle required action
+     *
+     * @param  string $type   Action type
+     * @param  AbstractModel  $model Item
+     *
+     * @return string
+     */
+    public function getActionUrl($type, AbstractModel $model)
+    {
+        $formHandler = App::instance()->getService('config')->getConfigArea('system/from_handler');
+        $params = array(
+            'entity' => $model->getEntityName(),
+            $model->getEntityPrimaryKey() => $model->getEntityId()
+        );
+        return $this->getBaseUrl($formHandler . $type, $params);
+    }
+
+    /**
+     * Return URL of file in skin folder
+     *
+     * @param $filename
+     * @return null|string
+     */
+    protected function _getSkinFileUrl($filename)
+    {
+        $file = App::getSkinDir() . DIRECTORY_SEPARATOR . $filename;
+        $fileUrl = $this->getBaseUrl() . App::APP_FOLDER . '/' . App::RESOURCE_FOLDER . '/' . App::SKIN_FOLDER . '/' . $filename;
+        if (is_file($file)) {
+            return $fileUrl;
+        }
+        return null;
     }
 }

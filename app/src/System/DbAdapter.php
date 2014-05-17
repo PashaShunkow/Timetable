@@ -142,6 +142,42 @@ class DbAdapter extends Object
     }
 
     /**
+     * beginTransaction method wrapper
+     */
+    public function beginTransaction()
+    {
+        $this->getConnection()->beginTransaction();
+    }
+
+    /**
+     * commit method wrapper
+     */
+    public function commit()
+    {
+        $this->getConnection()->commit();
+    }
+
+    /**
+     * rollBack method wrapper
+     */
+    public function rollBack()
+    {
+        $this->getConnection()->rollBack();
+    }
+
+    /**
+     * lastInsertId method wrapper
+     *
+     * @param string $name
+     *
+     * @return string
+     */
+    public function lastInsertId($name = null)
+    {
+        return $this->getConnection()->lastInsertId($name);
+    }
+
+    /**
      * FetchAll wrapper
      *
      * @param null $fetch_style
@@ -236,8 +272,8 @@ class DbAdapter extends Object
             }
 
         }
-        if ($bindPairs = $this->getBindPairs() && !empty($pairs)) {
-            $pairs = array_merge($bindPairs, $pairs);
+        if ($this->getBindPairs() && !empty($pairs)) {
+            $pairs = array_merge($this->getBindPairs(), $pairs);
         }
         $this->setBindPairs($pairs);
         $this->setQueryString($queryString);

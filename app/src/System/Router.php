@@ -20,12 +20,16 @@ class Router
     protected $_view   = 'view';
     protected $_action = 'index';
 
+    protected $_rootView;
+
     /**
      * Route on related view
      */
     public function route()
     {
-        $requestUri = $_SERVER['REQUEST_URI'];
+        /** @var  $request  Request */
+        $request = App::instance()->getService('request');
+        $requestUri = $request->getSERVER('REQUEST_URI');
         if(strpos($requestUri, '/') !== false)
         {
             if (strpos($requestUri, '/') === 0) {
@@ -41,10 +45,24 @@ class Router
             if (!empty($parts[2])) {
                 $this->_action = $parts[2];
             }
+            if ($params = array_diff($parts, $this->_getActionData())) {
+                foreach ($params as $param) {
+                    if (strpos($param, '-') != false) {
+                        $param = explode('-', $param, 2);
+                        if (isset($param[0]) && isset($param[1]))
+                        {
+                            $request->setGET($param[0], $param[1]);
+                        }
+                    }
+                }
+            }
         }
-        $layout = App::instance()->getService('layout');
-        $layout->setRootView($layout->initRootView());
-        $layout->getRootView()->setInnerView('content', $layout->initView($this->_getActionData()));
+
+        $factory = App::instance()->getService('factory');
+        /** @var $rootView \Entities\Root\View */
+        $rootView = $factory->initRootView();
+        $rootView->setInnerView('content', $factory->initView($this->_getActionData()));
+        App::instance()->setRootView($rootView);
     }
 
     /**
