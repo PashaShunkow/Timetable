@@ -4,5 +4,9 @@
         "dbname":"tt_tool",
         "user"  :"root",
         "pass"  :""
+    },
+    "debug":{
+        "log_file":"default.log",
+        "log_dir" :"log"
     }
 }

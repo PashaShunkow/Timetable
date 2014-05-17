@@ -57,6 +57,34 @@ abstract class AbstractCollection extends DbAdapter implements \Iterator
     }
 
     /**
+     * Add fields to collection filter
+     *
+     * @param array  $pairs key => value pairs
+     * @param string $condition eq, neq and etc.
+     *
+     * @return $this
+     */
+    public function addFieldToFilter(array $pairs, $condition = self::SQL_CONDITION_EQ)
+    {
+        $this->_fieldsToFilter[] = array('pairs' => $pairs, 'condition' => $condition);
+        return $this;
+    }
+
+    /**
+     * Add filters to collection query
+     *
+     * @param DbAdapter\Select $select
+     */
+    protected function _applyCollectionFilters(DbAdapter\Select $select)
+    {
+        if (!empty($this->_fieldsToFilter)) {
+            foreach ($this->_fieldsToFilter as $filter) {
+                $select->where($filter['pairs'], $filter['condition']);
+            }
+        }
+    }
+
+    /**
      * Add entity_id key into fields array(if need it), return fields array
      *
      * @return array||string
@@ -93,6 +121,7 @@ abstract class AbstractCollection extends DbAdapter implements \Iterator
             $select = $dbAdapter->defineCurrentAction('select');
             $select->setTable($this->getCoreModel()->getEntityTable());
             $select->addToSelect($this->_getFieldsToSelect());
+            $this->_applyCollectionFilters($select);
             $select->prepareQuery();
             if ($select->execute()) {
                 $result = $select->fetchAll(\PDO::FETCH_ASSOC);

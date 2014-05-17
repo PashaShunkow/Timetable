@@ -22,8 +22,11 @@ class DbAdapter extends Object
     const SQL_CONDITION_GT   = ' > ';
     const SQL_CONDITION_LT   = ' < ';
 
-    const SQL_OPERATOR_WHERE = 'WHERE ';
-    const SQL_OPERATOR_AND   = ' AND ';
+    const SQL_OPERATOR_WHERE  = 'WHERE ';
+    const SQL_OPERATOR_AND    = ' AND ';
+    const SQL_OPERATOR_OR     = ' OR ';
+    const SQL_OPERATOR_IN     = ' IN ';
+    const SQL_OPERATOR_NOT_IN = ' NOT IN';
 
     const SQL_INCLUDE_ALL    = '*';
 
@@ -208,12 +211,32 @@ class DbAdapter extends Object
         foreach ($pairs as $key => $value) {
             if ($this->_isWhereExist($queryString)) {
                 $queryString .= self::SQL_OPERATOR_AND;
-            }else{
+            } else {
                 $queryString .= self::SQL_OPERATOR_WHERE;
             }
-            $queryString .= $key . $condition . ':' . $key;
+            if (is_array($value)) {
+                if ($condition == self::SQL_CONDITION_EQ) {
+                    $subCondition = self::SQL_OPERATOR_IN;
+                } elseif ($condition == self::SQL_CONDITION_NEQ) {
+                    $subCondition = self::SQL_OPERATOR_NOT_IN;
+                } else {
+                    App::error('With operator: ' . $condition . ' one dimension $pairs array expected', true);
+                }
+                $queryString .= $key . $subCondition . '(';
+                foreach ($value as $one) {
+                    $queryString .= "'{$one}', ";
+                }
+                $queryString = rtrim($queryString, ', ') . ')';
+                /**
+                 * If value passed not as placeholder it should be excluded from bind pairs
+                 */
+                unset($pairs[$key]);
+            } else {
+                $queryString .= $key . $condition . ':' . $key;
+            }
+
         }
-        if ($bindPairs = $this->getBindPairs()) {
+        if ($bindPairs = $this->getBindPairs() && !empty($pairs)) {
             $pairs = array_merge($bindPairs, $pairs);
         }
         $this->setBindPairs($pairs);

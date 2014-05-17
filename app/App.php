@@ -160,13 +160,43 @@ class App
     }
 
     /**
-     * Wrapper for app errors
+     * System log error method
      *
-     * @param string $errorText Error text
+     * @param string $errorText   Log message
+     * @param bool   $critical    Is error critical(will stop the script if true)
+     * @param bool   $logFileName Specified log file
      */
-    static public function error($errorText)
+    static public function error($errorText, $critical = false, $logFileName = false)
     {
-        die($errorText);
+        /** @var  $sysConfig  System\Config */
+        $sysConfig = self::instance()->getService('config');
+        $errorText = self::_prepareErrorMessage($errorText);
+        if (!$logFileName) {
+            $logFileName = $sysConfig->getConfigArea('debug/log_file');
+        }
+        $logDirectory = self::getBaseDir() . DIRECTORY_SEPARATOR . $sysConfig->getConfigArea('debug/log_dir');
+        if (!is_dir($logDirectory)) {
+            if (!mkdir($logDirectory, 0777)) {
+                die('Cant create log directory in ' . $logDirectory);
+            }
+        }
+        $logFile = $logDirectory . DIRECTORY_SEPARATOR . $logFileName;
+        file_put_contents($logFile, $errorText, FILE_APPEND | LOCK_EX);
+        if ($critical) {
+            die('System crashed because of critical error :' . $errorText);
+        }
+    }
+
+    /**
+     * Prepare error message
+     *
+     * @param  string $message
+     * @return string
+     */
+    protected function _prepareErrorMessage($message)
+    {
+        $message = 'SYSTEM LOG ( ' . $date = date('Y/m/d H:i:s', time()) . ' ): ' . $message ."\n";
+        return $message;
     }
 
     /**
