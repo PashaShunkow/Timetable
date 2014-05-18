@@ -62,7 +62,7 @@ class Router
         /** @var $rootView \Entities\Root\View */
         $rootView = $factory->initRootView();
         $rootView->setInnerView('content', $factory->initView($this->_getActionData()));
-        App::instance()->setRootView($rootView);
+        App::instance()->getService('response')->setRootView($rootView);
     }
 
     /**

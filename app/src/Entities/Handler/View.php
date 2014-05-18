@@ -30,7 +30,7 @@ class View extends AbstractView
                 }
                 $model->setData($data);
                 $model->save();
-                $this->_redirectOnPrevious(array($model->getEntityPrimaryKey() => $model->getEntityId()));
+                $this->_redirectOnPrevious();
                 return;
             }else{
                 App::error('Handler: Cant save model: ' . $entityName . ' $data array is empty');
@@ -85,6 +85,6 @@ class View extends AbstractView
      */
     protected function _redirectOnPrevious($params = null)
     {
-        App::redirectOn($this->getRequest()->getSERVER('HTTP_REFERER'), $params, true);
+        $this->getResponse()->redirectOn($this->getRequest()->getSERVER('HTTP_REFERER'), $params, true);
     }
 }

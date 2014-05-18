@@ -1,0 +1,41 @@
+<?php
+/**
+ * @var $this \Entities\Subject\View
+ */
+?>
+<?php $_subject     = $this->getModel(); ?>
+<?php $_fromBuilder = $this->formBuilder(); ?>
+<h1><?php echo $this->tr('Subjects'); ?></h1>
+<div class="wrapper">
+    <div class="content">
+        <form name="<?php echo $this->getEntityName(); ?>" id="<?php echo $this->getEntityName(); ?>" action="<?php echo $_fromBuilder->getActionUrl('save', $_subject); ?>" method="POST" accept-charset="utf-8">
+            <div>
+                <ul>
+                    <li>
+                        <label for="name"><?php echo $this->tr('Name: ') ?></label>
+                        <input id="name" type="text" name="<?php echo $_fromBuilder->getElementName('name'); ?>" value="<?php echo $_subject->getData('name'); ?>"/>
+                    </li>
+                </ul>
+                <div>
+                    <input type="submit" name="submit" value="<?php echo $this->tr('Submit form'); ?>" />
+                </div>
+            </div>
+        </form>
+    </div>
+    <div class="right_column">
+        <?php $subjects = $this->getSubjectList(); ?>
+        <?php if($subjects->count() > 0) : ?>
+            <ul>
+                <?php foreach ($subjects as $subject) : ?>
+                    <li>
+                        <p><?php echo $subject->getName(); ?></p>
+                        <a href="<?php echo $this->getBaseUrl('subject/view/index', array($subject->getEntityPrimaryKey() => $subject->getEntityId())); ?>"><?php echo $this->tr('Edit'); ?></a>
+                        <a href="<?php echo $_fromBuilder->getActionUrl('delete', $subject); ?>"><?php echo $this->tr('Delete'); ?></a>
+                    </li>
+                <?php endforeach; ?>
+            </ul>
+        <?php else : ?>
+            <p><?php echo $this->tr('There are no any subjects yet.'); ?></p>
+        <?php endif; ?>
+    </div>
+</div>

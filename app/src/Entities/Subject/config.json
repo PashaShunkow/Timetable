@@ -1,0 +1,6 @@
+{
+    "model":{
+        "table"    :"subjects",
+        "entity_id":"id"
+    }
+}

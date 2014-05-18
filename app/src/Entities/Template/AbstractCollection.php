@@ -126,6 +126,7 @@ abstract class AbstractCollection extends DbAdapter implements \Iterator
             if ($select->execute()) {
                 $result = $select->fetchAll(\PDO::FETCH_ASSOC);
                 $this->_fillCollectionData($result);
+                $this->setIsLoaded(true);
                 return $this;
             } else {
                 App::error('Cant load collection of: ' . $this->getCoreModel()->getEntityName());
@@ -145,11 +146,52 @@ abstract class AbstractCollection extends DbAdapter implements \Iterator
     {
         foreach ($result as $key => $data) {
             $item = clone $this->getCoreModel();
-            $item->setData($data);
+            $item->fillModelData($data);
             $this->_items[$key] = $item;
         }
 
         return $this;
+    }
+
+    /**
+     * Return count of loaded items
+     *
+     * @return int
+     */
+    public function count()
+    {
+        if (!$this->_isLoaded()) {
+            $this->load();
+        }
+        return count($this->_items);
+    }
+
+    /**
+     * Return options array based on loaded items
+     *
+     * @param  string $label Here you can specify the key which will be a label
+     * @return array
+     */
+    public function toOptionArray($label = 'name')
+    {
+        $optionsArray = array();
+        foreach ($this->getItems() as $item) {
+            $optionsArray[] = array('value' => $item->getEntityId(), 'label' => $item->getData($label), 'selected' => null);
+        }
+        return $optionsArray;
+    }
+
+    /**
+     * Return array of loaded items
+     *
+     * @return array
+     */
+    public function getItems()
+    {
+        if (!$this->_isLoaded()) {
+            $this->load();
+        }
+        return $this->_items;
     }
 
     /**
@@ -159,7 +201,7 @@ abstract class AbstractCollection extends DbAdapter implements \Iterator
      */
     protected function _isLoaded()
     {
-        return !empty($this->_items);
+        return $this->getIsLoaded();
     }
 
     public function rewind() {

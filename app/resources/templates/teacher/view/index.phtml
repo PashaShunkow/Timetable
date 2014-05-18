@@ -3,28 +3,29 @@
  * @var $this \Entities\Teacher\View
  */
 ?>
-<?php $_teacher = $this->getModel(); ?>
+<?php $_teacher     = $this->getModel(); ?>
+<?php $_fromBuilder = $this->formBuilder(); ?>
 <h1><?php echo $this->tr('Teachers'); ?></h1>
 <div class="wrapper">
     <div class="content">
-        <form name="<?php echo $this->getEntityName(); ?>" id="<?php echo $this->getEntityName(); ?>" action="<?php echo $this->getActionUrl('save', $_teacher); ?>" method="POST" accept-charset="utf-8">
+        <form name="<?php echo $this->getEntityName(); ?>" id="<?php echo $this->getEntityName(); ?>" action="<?php echo $_fromBuilder->getActionUrl('save', $_teacher); ?>" method="POST" accept-charset="utf-8">
             <div>
                 <ul>
                     <li>
                         <label for="name"><?php echo $this->tr('Name: ') ?></label>
-                        <input id="name" type="text" name="<?php echo $this->getInputName('name'); ?>" value="<?php echo $_teacher->getData('name'); ?>"/>
+                        <input id="name" type="text" name="<?php echo $_fromBuilder->getElementName('name'); ?>" value="<?php echo $_teacher->getData('name'); ?>"/>
                     </li>
                     <li>
                         <label for="lastname"><?php echo $this->tr('Lastname: ') ?></label>
-                        <input id="lastname" type="text" name="<?php echo $this->getInputName('lastname'); ?>" value="<?php echo $_teacher->getData('lastname'); ?>"/>
+                        <input id="lastname" type="text" name="<?php echo $_fromBuilder->getElementName('lastname'); ?>" value="<?php echo $_teacher->getData('lastname'); ?>"/>
                     </li>
                     <li>
                         <label for="middlename"><?php echo $this->tr('Middlename: ') ?></label>
-                        <input id="middlename" type="text" name="<?php echo $this->getInputName('middlename'); ?>" value="<?php echo $_teacher->getData('middlename'); ?>"/>
+                        <input id="middlename" type="text" name="<?php echo $_fromBuilder->getElementName('middlename'); ?>" value="<?php echo $_teacher->getData('middlename'); ?>"/>
                     </li>
                     <li>
                         <label for="subject_ids"><?php echo $this->tr('Subject: ') ?></label>
-                        <input id="subject_ids" type="text" name="<?php echo $this->getInputName('subject_ids'); ?>" value="<?php echo $_teacher->getData('subject_ids'); ?>"/>
+                        <?php echo $this->formBuilder()->getRelativeElementHtml(array('element_id' => 'subject_ids','element_name' => 'subject_ids', 'element_type' => 'multiple'), $_teacher, 'subject'); ?>
                     </li>
                 </ul>
                 <div>
@@ -34,13 +35,22 @@
         </form>
     </div>
     <div class="right_column">
-        <?php if($teachers = $this->getTeachersList()) : ?>
+        <?php $teachers = $this->getTeachersList(); ?>
+        <?php if($teachers->count() > 0) : ?>
             <ul>
             <?php foreach ($teachers as $teacher) : ?>
                 <li>
                     <p><?php echo $teacher->getName(); ?> <?php echo $teacher->getLastname(); ?> <?php echo $teacher->getMiddlename(); ?></p>
+                    <?php $labels = $this->getSubjectsLabels($teacher); ?>
+                    <?php if(!empty($labels)) : ?>
+                        <ul>
+                        <?php foreach($labels as $label) : ?>
+                            <li><?php echo $label ?></li>
+                        <?php endforeach; ?>
+                        </ul>
+                    <?php endif; ?>
                     <a href="<?php echo $this->getBaseUrl('teacher/view/index', array($teacher->getEntityPrimaryKey() => $teacher->getEntityId())); ?>"><?php echo $this->tr('Edit'); ?></a>
-                    <a href="<?php echo $this->getActionUrl('delete', $teacher); ?>"><?php echo $this->tr('Delete'); ?></a>
+                    <a href="<?php echo $_fromBuilder->getActionUrl('delete', $teacher); ?>"><?php echo $this->tr('Delete'); ?></a>
                 </li>
             <?php endforeach; ?>
             </ul>

@@ -7,16 +7,16 @@ use \App;
 abstract class AbstractView extends AbstractEntityItem
 {
     protected $_model;
+    protected $_formBuilder;
 
     protected $_template = '';
 
     protected $_views = array();
 
-    public function __construct(AbstractModel $model = null)
+    public function __construct(AbstractModel $model = null, ViewElements\FormBuilder $formBuilder = null)
     {
-        if ($model) {
-            $this->_model = $model;
-        }
+        $this->_model       = $model;
+        $this->_formBuilder = $formBuilder->bindView($this);
     }
 
     /**
@@ -44,6 +44,16 @@ abstract class AbstractView extends AbstractEntityItem
     public function getRequest()
     {
         return App::instance()->getService('request');
+    }
+
+    /**
+     * Return response object
+     *
+     * @return \System\Response
+     */
+    public function getResponse()
+    {
+        return App::instance()->getService('response');
     }
 
     /**
@@ -176,33 +186,13 @@ abstract class AbstractView extends AbstractEntityItem
     }
 
     /**
-     * Return input name related to current entity
+     * Return form builder object
      *
-     * @param  string $name Input name
-     * @return string
+     * @return ViewElements\FormBuilder
      */
-    public function getInputName($name)
+    public function formBuilder()
     {
-        $inputName = $this->getEntityName() . '[' . $name . ']';
-        return $inputName;
-    }
-
-    /**
-     * Return URL to handle required action
-     *
-     * @param  string $type   Action type
-     * @param  AbstractModel  $model Item
-     *
-     * @return string
-     */
-    public function getActionUrl($type, AbstractModel $model)
-    {
-        $formHandler = App::instance()->getService('config')->getConfigArea('system/from_handler');
-        $params = array(
-            'entity' => $model->getEntityName(),
-            $model->getEntityPrimaryKey() => $model->getEntityId()
-        );
-        return $this->getBaseUrl($formHandler . $type, $params);
+        return $this->_formBuilder;
     }
 
     /**

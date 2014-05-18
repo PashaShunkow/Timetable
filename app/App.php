@@ -15,13 +15,12 @@ class App
 
     protected $_services = array(
         'request'   => null,
+        'response'  => null,
         'config'    => null,
         'router'    => null,
-        'factory'    => null,
+        'factory'   => null,
         'dbAdapter' => null
     );
-
-    protected $_rootView;
 
     protected function __construct()
     {
@@ -64,7 +63,7 @@ class App
         $httpHost  = $request->getSERVER('HTTP_HOST');
         $paramsStr = '';
         if (!empty($params)) {
-            $paramsStr = self::_convertToString($params);
+            $paramsStr = self::convertParamsToString($params);
         }
         return sprintf(
             "%s://%s",
@@ -79,7 +78,7 @@ class App
      * @param  array  $params params array ($key => $value)
      * @return string
      */
-    protected function _convertToString($params)
+    static public function convertParamsToString($params)
     {
         $paramsStr = '';
         foreach ($params as $name => $value) {
@@ -141,7 +140,7 @@ class App
             self::$_app = new self();
         }
         self::$_app->_init();
-        self::instance()->startRender();
+        self::instance()->getService('response')->startRender()->getHtml();
     }
 
     /**
@@ -185,39 +184,6 @@ class App
                 $this->_services[$name] = $service;
             }
         }
-    }
-
-    /**
-     * @param  \Entities\Root\View $view View object
-     * @return $this
-     */
-    public function setRootView($view)
-    {
-        $this->_rootView = $view;
-        return $this;
-    }
-
-    /**
-     * Return root view object
-     *
-     * @return mixed
-     */
-    public function getRootView()
-    {
-        return $this->_rootView;
-    }
-
-    /**
-     * Render all views
-     */
-    public function startRender($output = null)
-    {
-        if (!$output) {
-            $output = 'getHtml';
-        }
-
-        $outHtml = $this->_rootView->$output();
-        echo $outHtml;
     }
 
     /**
@@ -272,48 +238,6 @@ class App
     {
         $message = 'SYSTEM LOG ( ' . $date = date('Y/m/d H:i:s', time()) . ' ): ' . $message ."\n";
         return $message;
-    }
-
-    /**
-     * Redirect on specified url
-     *
-     * @param string $url                  Base url
-     * @param bool   $removeExistingParams Set true fro get clear URL (without old get params)
-     * @param null   $params Params array
-     */
-    static public function redirectOn($url, $params = null, $removeExistingParams = false)
-    {
-        if ($removeExistingParams || $params) {
-            $url = self::_rebuildUrl($url);
-        }
-        if ($params) {
-            $url .= self::_convertToString($params);
-        }
-        header('Location: ' . $url);
-    }
-
-    /**
-     * Rebuild url for remove 'old' get params
-     *
-     * @param  string $url Url
-     * @return string
-     */
-    protected function _rebuildUrl($url)
-    {
-        $requestUri = str_replace(self::getBaseUrl(), '', $url);
-        if($requestUri && strpos($requestUri, '/') !== false){
-            if (strpos($requestUri, '/') === 0) {
-                $requestUri = substr($requestUri, 1);
-            }
-            $parts = explode('/', $requestUri);
-            $requestUri = '';
-            for ($i = 0; $i < 3; $i++) {
-                if (isset($parts[$i])) {
-                    $requestUri .= $parts[$i] . '/';
-                }
-            }
-        }
-        return self::getBaseUrl() . rtrim($requestUri, '/');
     }
 
     /**

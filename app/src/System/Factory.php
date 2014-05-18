@@ -21,6 +21,8 @@ class Factory
     const ENTITY_NAMESPACE = 'Entities';
     const NS_SEPARATOR     = '\\';
 
+    protected $_templates = array();
+
     /**
      * Create view and related model
      *
@@ -30,7 +32,7 @@ class Factory
      */
     public function initView(array $viewData)
     {
-        $view = $this->createView(ucfirst($viewData['entity']), ucfirst($viewData['view']), true);
+        $view = $this->createView(ucfirst($viewData['entity']), ucfirst($viewData['view']), true, true);
         $actionName = $viewData['action'] . 'Action';
         $view->setTemplate($this->_constructTemplateName($viewData));
         $view->$actionName();
@@ -40,17 +42,19 @@ class Factory
     /**
      * Return view object
      *
-     * @param string $entityName
-     * @param string $viewName
-     * @param bool $initModel
-     * @param array $modelData Specify this parameter if you need not default inner model
+     * @param string        $entityName
+     * @param string        $viewName
+     * @param array | bool  $modelData Specify this parameter as true if you need default inner model or as array if you need not default model
+     * @param bool          $initFormBuilder
      * @return \Entities\Template\AbstractView
      */
-    public function createView($entityName, $viewName = self::ROOT_VIEW, $initModel = false, $modelData = null)
+    public function createView($entityName, $viewName = self::ROOT_VIEW, $modelData = false, $initFormBuilder = false)
     {
         $viewClassName = self::ENTITY_NAMESPACE . self::NS_SEPARATOR . $entityName . self::NS_SEPARATOR . $viewName;
-        $model = null;
-        if($initModel)
+        $model       = null;
+        $formBuilder = null;
+
+        if($modelData)
         {
             $modelEntityName = $entityName;
             $modelName       = self::ROOT_MODEL;
@@ -60,8 +64,14 @@ class Factory
             }
             $model = $this->createModel($modelEntityName, $modelName);
         }
+        if ($initFormBuilder) {
+            $formBuilderClass = self::ENTITY_NAMESPACE . self::NS_SEPARATOR . 'Template' . self::NS_SEPARATOR . 'ViewElements' . self::NS_SEPARATOR . 'FormBuilder';
+            if (class_exists($formBuilderClass)) {
+                $formBuilder = new $formBuilderClass();
+            }
+        }
         if (class_exists($viewClassName)) {
-            return new $viewClassName($model);
+            return new $viewClassName($model, $formBuilder);
         }
         App::error('Cant init view , class: ' . $viewClassName . ' is not exist');
         return null;
@@ -82,6 +92,25 @@ class Factory
         }
         return null;
     }
+
+    /**
+     * Return empty template of entity
+     *
+     * @param $entityName
+     * @param string $modelName
+     * @return mixed
+     */
+    public function getTemplateOf($entityName, $modelName = self::ROOT_MODEL)
+    {
+        if (!isset($this->_templates[$entityName][$modelName])) {
+            $this->_templates[$entityName][$modelName] = $this->createModel($entityName, $modelName);
+        }
+
+        $template = $this->_templates[$entityName][$modelName];
+
+        return $template->flushModelData();
+    }
+
 
     /**
      * Create root view and related model

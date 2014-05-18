@@ -16,6 +16,7 @@ use \App;
 abstract class AbstractModel extends AbstractEntityItem
 {
     const ENTITY_TYPE = 'model';
+    const ARRAY_FLAG  = '[]:';
     protected $_entityConfig = array();
     /**
      * @var \System\Config
@@ -117,8 +118,9 @@ abstract class AbstractModel extends AbstractEntityItem
             $select->where($pairs, DbAdapter::SQL_CONDITION_EQ);
             $select->prepareQuery();
             if ($select->execute()) {
-                $result = $select->fetch(\PDO::FETCH_ASSOC);
-                $this->_fillModelData($result);
+                if ($result = $select->fetch(\PDO::FETCH_ASSOC)) {
+                    $this->fillModelData($result);
+                }
                 return $this;
             } else {
                 App::error('Cant load model by id: ' . $id);
@@ -187,7 +189,7 @@ abstract class AbstractModel extends AbstractEntityItem
                 ->prepareQuery()
                 ->execute();
             if ($result) {
-                $this->_flushModelData();
+                $this->flushModelData();
             }
             return $result;
         } catch (\PDOException $e) {
@@ -232,6 +234,11 @@ abstract class AbstractModel extends AbstractEntityItem
              * Remove not existing in DB keys
              */
             $data = array_intersect_key($data, $tableMap);
+            foreach ($data as $key => $value) {
+                if (is_array($value)) {
+                    $data[$key] = self::ARRAY_FLAG . implode(',', $value);
+                }
+            }
             return $data;
         } else {
             App::error('Cant map a table (name): ' . $this->getEntityConfig('table') . ' probably it is not exist', true);
@@ -245,8 +252,17 @@ abstract class AbstractModel extends AbstractEntityItem
      *
      * @return $this
      */
-    protected function _fillModelData($data)
+    public function fillModelData($data)
     {
+        foreach ($data as $key => $value) {
+            if (strpos($value, self::ARRAY_FLAG) !== false) {
+                $value = str_replace(self::ARRAY_FLAG, '', $value);
+                if (strpos($value, ',') !== false) {
+                    $value = explode(',', $value);
+                }
+                $data[$key] = $value;
+            }
+        }
         $this->setData($data);
         $this->setOrigData(null, null);
         return $this;
@@ -257,7 +273,7 @@ abstract class AbstractModel extends AbstractEntityItem
      *
      * @return $this
      */
-    protected function _flushModelData()
+    public function flushModelData()
     {
         $this->unsetData();
         $this->setOrigData(null, null);
