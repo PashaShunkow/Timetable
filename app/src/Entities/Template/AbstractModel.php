@@ -28,6 +28,8 @@ abstract class AbstractModel extends AbstractEntityItem
      */
     protected $_dbAdapter;
 
+    static protected $_foreignKeysOptions = array();
+
     public function __construct(Config $config, DbAdapter $dbAdapter)
     {
         $this->_config = $config;
@@ -60,7 +62,9 @@ abstract class AbstractModel extends AbstractEntityItem
             $this->_entityConfig = $this->_config->getEntityConfig($this);
             $this->_entityConfig = $this->_entityConfig[$this->getEntityType()];
         }
-        if ($key && isset($this->_entityConfig[$key])) {
+        if ($key && !isset($this->_entityConfig[$key])) {
+            return null;
+        } elseif ($key && isset($this->_entityConfig[$key])) {
             return $this->_entityConfig[$key];
         }
         return $this->_entityConfig;
@@ -234,6 +238,19 @@ abstract class AbstractModel extends AbstractEntityItem
              * Remove not existing in DB keys
              */
             $data = array_intersect_key($data, $tableMap);
+
+            if ($foreignKeys = $this->getEntityConfig('foreign_keys')) {
+                foreach ($foreignKeys as $foreignKey => $entityName) {
+                    if (!empty($data[$foreignKey])) {
+                        foreach ($data[$foreignKey] as $key => $item) {
+                            if (is_object($item)) {
+                                $data[$foreignKey][$key] = $item->getEntityId();
+                            }
+                        }
+                    }
+                }
+            }
+
             foreach ($data as $key => $value) {
                 if (is_array($value)) {
                     $data[$key] = self::ARRAY_FLAG . implode(',', $value);
@@ -248,11 +265,12 @@ abstract class AbstractModel extends AbstractEntityItem
     /**
      * Fill inner data arrays
      *
-     * @param array $data Data array
+     * @param array  $data Data array
+     * @param bool   $initForeignModels
      *
      * @return $this
      */
-    public function fillModelData($data)
+    public function fillModelData($data, $initForeignModels = true)
     {
         foreach ($data as $key => $value) {
             if (strpos($value, self::ARRAY_FLAG) !== false) {
@@ -263,6 +281,22 @@ abstract class AbstractModel extends AbstractEntityItem
                 $data[$key] = $value;
             }
         }
+
+        if ($initForeignModels && is_array($this->getEntityConfig('foreign_keys'))) {
+            $foreignKeys = $this->getEntityConfig('foreign_keys');
+            foreach ($foreignKeys as $key => $entityName) {
+                if (isset($data[$key])) {
+
+                    if (!isset(self::$_foreignKeysOptions[$entityName])) {
+                        self::$_foreignKeysOptions[$entityName] = App::createModel($entityName)->getCollection();
+                    }
+
+                    $collection = self::$_foreignKeysOptions[$entityName];
+                    $data[$key] = $collection->getItemsByIds($data[$key]);
+                }
+            }
+        }
+
         $this->setData($data);
         $this->setOrigData(null, null);
         return $this;

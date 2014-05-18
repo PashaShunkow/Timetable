@@ -266,4 +266,28 @@ class App
         $outArray = json_decode($inputString, $likeArray);
         return $outArray;
     }
+
+    /**
+     * Return model object
+     *
+     * @param $entityName
+     * @param string $modelName
+     * @return \Entities\Template\AbstractModel
+     */
+    static public function createModel($entityName, $modelName = System\Factory::ROOT_MODEL)
+    {
+        return self::instance()->getService('factory')->createModel($entityName, $modelName);
+    }
+
+    /**
+     * Return empty template of entity
+     *
+     * @param $entityName
+     * @param string $modelName
+     * @return mixed
+     */
+    static public function getTemplateOf($entityName, $modelName = System\Factory::ROOT_MODEL)
+    {
+        return self::instance()->getService('factory')->getTemplateOf($entityName, $modelName);
+    }
 }

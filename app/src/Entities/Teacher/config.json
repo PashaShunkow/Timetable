@@ -1,6 +1,9 @@
 {
     "model":{
-        "table"    :"teachers",
-        "entity_id":"id"
+        "table"       :"teachers",
+        "entity_id"   :"id",
+        "foreign_keys":{
+            "subjects":"subject"
+        }
     }
 }

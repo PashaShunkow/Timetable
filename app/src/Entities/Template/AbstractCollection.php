@@ -111,9 +111,10 @@ abstract class AbstractCollection extends DbAdapter implements \Iterator
     /**
      * Common load method for collections
      *
+     * @param  bool  $initForeignModels
      * @return $this
      */
-    public function load()
+    public function load($initForeignModels = true)
     {
         try {
             $dbAdapter = $this->getCoreModel()->getDbAdapter();
@@ -125,7 +126,7 @@ abstract class AbstractCollection extends DbAdapter implements \Iterator
             $select->prepareQuery();
             if ($select->execute()) {
                 $result = $select->fetchAll(\PDO::FETCH_ASSOC);
-                $this->_fillCollectionData($result);
+                $this->_fillCollectionData($result, $initForeignModels);
                 $this->setIsLoaded(true);
                 return $this;
             } else {
@@ -139,14 +140,15 @@ abstract class AbstractCollection extends DbAdapter implements \Iterator
     /**
      * Set results into inner array
      *
+     * @param  bool  $initForeignModels
      * @param  array $result Query results
      * @return $this
      */
-    protected function _fillCollectionData($result)
+    protected function _fillCollectionData($result, $initForeignModels)
     {
         foreach ($result as $key => $data) {
             $item = clone $this->getCoreModel();
-            $item->fillModelData($data);
+            $item->fillModelData($data, $initForeignModels);
             $this->_items[$key] = $item;
         }
 
@@ -192,6 +194,29 @@ abstract class AbstractCollection extends DbAdapter implements \Iterator
             $this->load();
         }
         return $this->_items;
+    }
+
+    /**
+     * Return items from collection by id value
+     *
+     * @param $ids
+     * @return array
+     */
+    public function getItemsByIds($ids)
+    {
+        if (!is_array($ids)) {
+            $ids = array($ids);
+        }
+        $outItems = array();
+        $items = $this->getItems();
+        foreach ($items as $item) {
+            foreach ($ids as $id) {
+                if ($item->getEntityId() == $id) {
+                    $outItems[] = clone $item;
+                }
+            }
+        }
+        return $outItems;
     }
 
     /**

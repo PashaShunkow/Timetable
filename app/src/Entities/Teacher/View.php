@@ -34,7 +34,7 @@ class View extends AbstractView
 
     public function getSubjectsLabels(AbstractModel $teacher)
     {
-        $subjectTpl = App::instance()->getService('factory')->getTemplateOf('subject');
+        $subjectTpl = App::getTemplateOf('subject');
         $subjects = $this->formBuilder()->prepareOptions('subject_ids', $teacher, $subjectTpl);
         $labels = array();
         foreach ($subjects as $subject) {

@@ -71,10 +71,17 @@ class FormBuilder
         return $this->_boundView;
     }
 
-
-    public function getRelativeElementHtml($elData = array(), $item, $relatedEntityName)
+    /**
+     * Return html of select depends on foreign entity
+     *
+     * @param array         $elData Html element data array
+     * @param AbstractModel $item
+     * @param string        $relatedEntityName
+     * @return string
+     */
+    public function getRelativeElementHtml($elData = array(), AbstractModel $item, $relatedEntityName)
     {
-        $relatedEntity = App::instance()->getService('factory')->getTemplateOf(ucfirst($relatedEntityName));
+        $relatedEntity = App::getTemplateOf(ucfirst($relatedEntityName));
 
         $data = new Object();
         $data->setData($elData);
@@ -89,6 +96,14 @@ class FormBuilder
         return $html;
     }
 
+    /**
+     * Prepare options, set selected according to $item data
+     *
+     * @param string        $elementName
+     * @param AbstractModel $item
+     * @param AbstractModel $relatedEntity
+     * @return mixed
+     */
     public function prepareOptions($elementName, AbstractModel $item, AbstractModel $relatedEntity)
     {
         if (!isset($this->_optionsList[$elementName])) {
@@ -96,12 +111,9 @@ class FormBuilder
         }
         $options = $this->_optionsList[$elementName];
         if($selectedItems = $item->getData($elementName)) {
-            if (!is_array($selectedItems)) {
-                $selectedItems = array($selectedItems);
-            }
-            foreach ($selectedItems as $id) {
+            foreach ($selectedItems as $item) {
                 foreach ($options as &$option) {
-                    if ($option['value'] == $id) {
+                    if ($option['value'] == $item->getEntityId()) {
                         $option['selected'] = true;
                     }
                 }
@@ -110,6 +122,12 @@ class FormBuilder
         return $options;
     }
 
+    /**
+     * Return text form selected option
+     *
+     * @param  array $option
+     * @return string
+     */
     protected function _getSelectedText(array $option)
     {
         if (!empty($option['selected'])) {
